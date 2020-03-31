@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DepartmentsEmployeesAPI.Models
+namespace DogWalkerAPI.Models
 {
     // C# representation of the Employee table
     public class Walk

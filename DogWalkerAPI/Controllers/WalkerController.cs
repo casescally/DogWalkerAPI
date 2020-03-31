@@ -6,10 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using DepartmentsEmployeesAPI.Models;
+using DogWalkerAPI.Models;
 using Microsoft.AspNetCore.Http;
 
-namespace DepartmentsEmployeesAPI.Controllers
+namespace DogWalkerAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -31,14 +31,21 @@ namespace DepartmentsEmployeesAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public async Task<IActionResult> Get([FromQuery] int? neighborhoodId)
         {
             using (SqlConnection conn = Connection)
             {
                 conn.Open();
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = "SELECT Id, Name FROM Walker";
+                    cmd.CommandText = "SELECT w.Id, w.[Name], w.NeighborhoodId, n.[Name] AS NeighborhoodName FROM Walker w LEFT JOIN Neighborhood n ON n.Id = w.NeighborhoodId WHERE 1 = 1";
+
+                    if (neighborhoodId != null)
+                    {
+                        cmd.CommandText += " WHERE neighborhoodId =@neighborhoodId";
+                        cmd.Parameters.Add(new SqlParameter("@neighborhoodId", neighborhoodId));
+                    }
+
                     SqlDataReader reader = cmd.ExecuteReader();
                     List<Walker> walkers = new List<Walker>();
 
@@ -47,7 +54,13 @@ namespace DepartmentsEmployeesAPI.Controllers
                         Walker walker = new Walker
                         {
                             Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                            Name = reader.GetString(reader.GetOrdinal("Name"))
+                            Name = reader.GetString(reader.GetOrdinal("Name")),
+                            NeighborhoodId = reader.GetInt32(reader.GetOrdinal("NeighborhoodId")),
+                            Neighborhood = new Neighborhood
+                            {
+                                Id = reader.GetInt32(reader.GetOrdinal("NeighborhoodId")),
+                                Name = reader.GetString(reader.GetOrdinal("NeighborhoodName"))
+                            }
                         };
 
                         walkers.Add(walker);
@@ -68,10 +81,10 @@ namespace DepartmentsEmployeesAPI.Controllers
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = @"
-                        SELECT
-                        wa.Id, wa.[Name], hood.Id, hood.[Name], w.Id FROM Walker wa
-                        LEFT JOIN Neighborhood hood ON hood.Id = wa.NeighborhoodId
-                        LEFT JOIN Walks w ON w.Id = wa.Id
+                        SELECT wa.Id AS WalkersId, wa.[Name], wa.NeighborhoodId, w.Id AS WalkId, w.WalkersId AS WalkersId, w.Duration AS Duration, w.DogId, w.[Date] AS [Date] 
+                        FROM Walker wa
+                        LEFT JOIN Neighborhood neighborhood ON neighborhood.Id = wa.NeighborhoodId
+                        LEFT JOIN Walks w ON wa.Id = w.WalkersId
                         WHERE wa.Id = @id";
 
                     cmd.Parameters.Add(new SqlParameter("@id", id));
